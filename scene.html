@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>芒市三维导览</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: "Microsoft YaHei", sans-serif; overflow: hidden; }
+
+  /* 顶部栏 */
+  .topbar {
+    position: fixed; top: 0; left: 0; right: 0; height: 48px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 16px; background: #2c3e50; color: #fff; z-index: 10;
+  }
+  .topbar .title { font-size: 16px; }
+  .back-btn {
+    background: #4a6580; color: #fff; border: none; padding: 6px 14px;
+    border-radius: 4px; cursor: pointer; font-size: 14px;
+  }
+  .back-btn:hover { background: #5a7895; }
+
+  /* 三维画布容器 */
+  #sceneWrap { position: fixed; top: 48px; left: 0; right: 0; bottom: 0; }
+
+  /* 加载态 */
+  #loading {
+    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: #1a252f; color: #fff; font-size: 18px; z-index: 20;
+  }
+  #loading.hide { display: none; }
+
+  /* 断网提示 */
+  #offlineTip {
+    position: fixed; top: 56px; left: 50%; transform: translateX(-50%);
+    background: #c0392b; color: #fff; padding: 8px 16px; border-radius: 4px;
+    font-size: 14px; z-index: 15; display: none;
+  }
+  #offlineTip.show { display: block; }
+
+  /* 提示文字 */
+  .hint {
+    position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.5); color: #fff; padding: 6px 12px;
+    border-radius: 4px; font-size: 13px; z-index: 10;
+  }
+
+  /* 响应式：三档宽度 */
+  @media (max-width: 480px) {
+    .topbar .title { font-size: 14px; }
+    .hint { font-size: 12px; }
+  }
+  @media (min-width: 481px) and (max-width: 1024px) {
+    .topbar .title { font-size: 15px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="title">芒市三维导览</span>
+  <button class="back-btn" id="backBtn">← 返回首页</button>
+</div>
+
+<div id="sceneWrap"></div>
+
+<div id="loading">三维场景加载中...</div>
+<div id="offlineTip">网络已断开，三维资源无法加载</div>
+<div class="hint">鼠标拖拽旋转 · 滚轮缩放</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+  import * as THREE from 'three';
+  import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+  const sceneWrap = document.getElementById('sceneWrap');
+  const loading = document.getElementById('loading');
+
+  let scene, camera, renderer, controls;
+
+  // 共用材质
+  const goldMat = new THREE.MeshLambertMaterial({ color: 0xf2c14e });
+  const stoneMat = new THREE.MeshLambertMaterial({ color: 0xb8b0a0 });
+  const trunkMat = new THREE.MeshLambertMaterial({ color: 0x8b5a2b });
+  const leafMat = new THREE.MeshLambertMaterial({ color: 0x2e8b3d });
+
+  function addMesh(geo, mat, x, y, z, parent) {
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(x, y, z);
+    parent.add(m);
+    return m;
+  }
+
+  // 勐焕大金塔
+  function makePagoda(x, z, s) {
+    const g = new THREE.Group();
+    addMesh(new THREE.CylinderGeometry(3.2 * s, 3.6 * s, 1 * s, 20), goldMat, 0, 0.5 * s, 0, g);
+    addMesh(new THREE.CylinderGeometry(2.6 * s, 3 * s, 0.8 * s, 20), goldMat, 0, 1.4 * s, 0, g);
+    addMesh(new THREE.CylinderGeometry(1.5 * s, 2.5 * s, 2.6 * s, 20), goldMat, 0, 3.1 * s, 0, g);
+    addMesh(new THREE.ConeGeometry(1.4 * s, 3.2 * s, 20), goldMat, 0, 6 * s, 0, g);
+    addMesh(new THREE.CylinderGeometry(0.1 * s, 0.14 * s, 1.4 * s, 8), goldMat, 0, 8.3 * s, 0, g);
+    g.position.set(x, 0, z);
+    scene.add(g);
+  }
+
+  // 树包塔
+  function makeTreePagoda(x, z) {
+    const g = new THREE.Group();
+    addMesh(new THREE.BoxGeometry(2.4, 3, 2.4), stoneMat, 0, 1.5, 0, g);
+    addMesh(new THREE.BoxGeometry(1.6, 1.4, 1.6), stoneMat, 0, 3.7, 0, g);
+    addMesh(new THREE.CylinderGeometry(0.25, 0.35, 4.5, 8), trunkMat, 0.9, 2.2, 0.2, g);
+    addMesh(new THREE.ConeGeometry(1.8, 3, 8), leafMat, 0.9, 5.2, 0.2, g);
+    addMesh(new THREE.ConeGeometry(1.4, 2.4, 8), leafMat, 0.9, 6.6, 0.2, g);
+    g.position.set(x, 0, z);
+    scene.add(g);
+  }
+
+  // 傣家小楼
+  function makeHouse(x, z, roofColor) {
+    const g = new THREE.Group();
+    addMesh(new THREE.BoxGeometry(4, 2.4, 3), new THREE.MeshLambertMaterial({ color: 0xf0e6d2 }), 0, 1.2, 0, g);
+    const roof = addMesh(new THREE.ConeGeometry(3.2, 2, 4), new THREE.MeshLambertMaterial({ color: roofColor }), 0, 3.4, 0, g);
+    roof.rotation.y = Math.PI / 4;
+    g.position.set(x, 0, z);
+    scene.add(g);
+  }
+
+  // 热带树木
+  function makeTree(x, z) {
+    const g = new THREE.Group();
+    addMesh(new THREE.CylinderGeometry(0.22, 0.3, 3.2, 8), trunkMat, 0, 1.6, 0, g);
+    addMesh(new THREE.ConeGeometry(1.4, 2.6, 8), leafMat, 0, 3.8, 0, g);
+    addMesh(new THREE.ConeGeometry(1.1, 2.2, 8), leafMat, 0, 5, 0, g);
+    g.position.set(x, 0, z);
+    scene.add(g);
+  }
+
+  function init() {
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87ceeb);
+
+    camera = new THREE.PerspectiveCamera(50, sceneWrap.clientWidth / sceneWrap.clientHeight, 0.1, 1000);
+    camera.position.set(20, 16, 24);
+
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(sceneWrap.clientWidth, sceneWrap.clientHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    sceneWrap.appendChild(renderer.domElement);
+
+    // 光照
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const dir = new THREE.DirectionalLight(0xffffff, 0.8);
+    dir.position.set(10, 20, 10);
+    scene.add(dir);
+
+    // 地面
+    const ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(70, 70),
+      new THREE.MeshLambertMaterial({ color: 0x5a8a52 })
+    );
+    ground.rotation.x = -Math.PI / 2;
+    scene.add(ground);
+
+    // 孔雀湖
+    const lake = new THREE.Mesh(
+      new THREE.CircleGeometry(7, 32),
+      new THREE.MeshLambertMaterial({ color: 0x3f8fc4 })
+    );
+    lake.rotation.x = -Math.PI / 2;
+    lake.position.set(15, 0.02, 9);
+    scene.add(lake);
+
+    // 芒市地标
+    makePagoda(0, 0, 1);          // 勐焕大金塔
+    makeTreePagoda(-14, -6);      // 树包塔
+    makeHouse(-12, 9, 0xc0392b);  // 傣家小楼
+    makeHouse(-17, 13, 0xd2691e);
+
+    // 热带树木
+    [
+      [-20, -12], [20, -12], [-23, 1], [25, -2], [-20, 16], [6, 18],
+      [-6, -19], [6, -19], [24, -7], [9, -16], [-25, 8], [0, 23]
+    ].forEach(t => makeTree(t[0], t[1]));
+
+    controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 2, 0);
+    controls.update();
+
+    window.addEventListener('resize', onResize);
+    loading.classList.add('hide');
+    animate();
+  }
+
+  function onResize() {
+    camera.aspect = sceneWrap.clientWidth / sceneWrap.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(sceneWrap.clientWidth, sceneWrap.clientHeight);
+  }
+
+  function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+  }
+
+  init();
+</script>
+
+<script>
+  // 返回首页
+  document.getElementById('backBtn').addEventListener('click', function () {
+    window.location.href = 'index.html';
+  });
+
+  // 断网提示
+  function updateOnline() {
+    var tip = document.getElementById('offlineTip');
+    tip.classList.toggle('show', !navigator.onLine);
+  }
+  window.addEventListener('online', updateOnline);
+  window.addEventListener('offline', updateOnline);
+  updateOnline();
+
+  // 模块加载失败兜底（断网时 Three.js 无法加载）
+  var loadingEl = document.getElementById('loading');
+  function showFail() {
+    loadingEl.classList.add('hide');
+    document.getElementById('offlineTip').classList.add('show');
+  }
+  setTimeout(function () {
+    if (!loadingEl.classList.contains('hide')) showFail();
+  }, 4000);
+  window.addEventListener('error', showFail);
+</script>
+
+</body>
+</html>

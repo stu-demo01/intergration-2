@@ -101,7 +101,7 @@
   .tag.closed { background: #fdecea; color: #c0392b; }
 
   /* 统计区块 */
-  #statsWrap { position: relative; height: 400px; }
+  .chart-box { position: relative; height: 360px; }
   .empty { color: #999; padding: 24px; text-align: center; }
 </style>
 </head>
@@ -111,8 +111,8 @@
   <span class="logo">芒市文旅介绍</span>
   <a href="#home" class="active" data-page="home">首页</a>
   <a href="#study" data-page="study">景点介绍</a>
-  <a href="#stats" data-page="stats">美食介绍</a>
-  <a href="three-d/scene.html">芒市三维</a>
+  <a href="#stats" data-page="stats">人气统计</a>
+  <a href="scene.html">芒市三维</a>
 </nav>
 
 <main>
@@ -120,39 +120,41 @@
   <section id="home" class="page active">
     <div class="cards">
       <a class="card" data-page="study"><h3>景点介绍</h3><p>勐焕大金塔、树包塔、孔雀湖等芒市风光</p></a>
-      <a class="card" data-page="stats"><h3>美食介绍</h3><p>撒撇、泡鲁达、手抓饭等地道傣味</p></a>
-      <a class="card" href="three-d/scene.html"><h3>芒市三维</h3><p>三维芒市场景</p></a>
+      <a class="card" data-page="stats"><h3>人气统计</h3><p>热门景点与美食人气指数柱状图</p></a>
+      <a class="card" href="scene.html"><h3>芒市三维</h3><p>三维芒市场景</p></a>
     </div>
   </section>
 
   <!-- 景点介绍 -->
   <section id="study" class="page">
     <div class="filter-bar">
-      <label>区域：
+      <label>地理位置：
         <select id="areaFilter">
           <option value="">全部</option>
           <option value="市区">市区</option>
           <option value="近郊">近郊</option>
         </select>
       </label>
-      <label>类型：
-        <select id="typeFilter">
+      <label>开放时间：
+        <select id="timeFilter">
           <option value="">全部</option>
-          <option value="宗教文化">宗教文化</option>
-          <option value="人文奇观">人文奇观</option>
-          <option value="人文景观">人文景观</option>
-          <option value="自然风光">自然风光</option>
-          <option value="休闲度假">休闲度假</option>
-          <option value="休闲购物">休闲购物</option>
+          <option value="全天开放">全天开放</option>
+          <option value="08:00-18:00">08:00-18:00</option>
+          <option value="08:30-19:00">08:30-19:00</option>
+          <option value="09:00-18:00">09:00-18:00</option>
+          <option value="09:00-22:00">09:00-22:00</option>
         </select>
       </label>
     </div>
     <div id="spotList" class="room-list"></div>
   </section>
 
-  <!-- 美食介绍 -->
+  <!-- 人气统计 -->
   <section id="stats" class="page">
-    <div id="statsWrap"><canvas id="usageChart"></canvas></div>
+    <h3 style="margin-bottom: 8px;">热门景点人气指数</h3>
+    <div class="chart-box"><canvas id="spotChart"></canvas></div>
+    <h3 style="margin: 24px 0 8px;">热门美食人气指数</h3>
+    <div class="chart-box"><canvas id="foodChart"></canvas></div>
   </section>
 
   <!-- 芒市三维 -->
@@ -164,28 +166,28 @@
 <script>
   // 景点数据（写死）
   var spots = [
-    { name: '勐焕大金塔', area: '市区', type: '宗教文化', hot: true, desc: '雷让山顶的南亚傣式金塔，芒市地标' },
-    { name: '树包塔·塔包树', area: '市区', type: '人文奇观', hot: true, desc: '树塔相融两百余年的城中奇观' },
-    { name: '勐巴娜西珍奇园', area: '市区', type: '人文景观', hot: false, desc: '古树名木、奇石翡翠汇聚一堂' },
-    { name: '菩提寺', area: '市区', type: '宗教文化', hot: false, desc: '傣式宫殿风格的千年古寺' },
-    { name: '珠宝小镇', area: '市区', type: '休闲购物', hot: false, desc: '玉石翡翠交易与文旅体验街区' },
-    { name: '孔雀湖', area: '近郊', type: '自然风光', hot: true, desc: '湖光山色、绿孔雀栖息的生态景区' },
-    { name: '法帕温泉', area: '近郊', type: '休闲度假', hot: false, desc: '天然露天温泉，康养度假胜地' },
-    { name: '后谷咖啡庄园', area: '近郊', type: '休闲度假', hot: false, desc: '万亩咖啡园，品鉴云南小粒咖啡' }
+    { name: '勐焕大金塔', area: '市区', time: '08:00-18:00', hot: true, desc: '雷让山顶的南亚傣式金塔，芒市地标' },
+    { name: '树包塔·塔包树', area: '市区', time: '全天开放', hot: true, desc: '树塔相融两百余年的城中奇观' },
+    { name: '勐巴娜西珍奇园', area: '市区', time: '08:30-19:00', hot: false, desc: '古树名木、奇石翡翠汇聚一堂' },
+    { name: '菩提寺', area: '市区', time: '08:00-18:00', hot: false, desc: '傣式宫殿风格的千年古寺' },
+    { name: '珠宝小镇', area: '市区', time: '09:00-22:00', hot: false, desc: '玉石翡翠交易与文旅体验街区' },
+    { name: '孔雀湖', area: '近郊', time: '全天开放', hot: true, desc: '湖光山色、绿孔雀栖息的生态景区' },
+    { name: '法帕温泉', area: '近郊', time: '09:00-22:00', hot: false, desc: '天然露天温泉，康养度假胜地' },
+    { name: '后谷咖啡庄园', area: '近郊', time: '09:00-18:00', hot: false, desc: '万亩咖啡园，品鉴云南小粒咖啡' }
   ];
 
   function renderSpots() {
     var area = document.getElementById('areaFilter').value;
-    var type = document.getElementById('typeFilter').value;
+    var time = document.getElementById('timeFilter').value;
     var list = spots.filter(function (r) {
       if (area && r.area !== area) return false;
-      if (type && r.type !== type) return false;
+      if (time && r.time !== time) return false;
       return true;
     });
     var html = list.map(function (r) {
       return '<div class="room-item">' +
         '<h4>' + r.name + '</h4>' +
-        '<div class="meta">' + r.area + ' · ' + r.type + '</div>' +
+        '<div class="meta">' + r.area + ' · 开放 ' + r.time + '</div>' +
         '<div class="meta">' + r.desc + '</div>' +
         (r.hot ? '<span class="tag open">必游打卡</span>' : '') +
         '</div>';
@@ -193,28 +195,19 @@
     document.getElementById('spotList').innerHTML = html || '<div class="empty">无匹配景点</div>';
   }
 
-  // 美食人气柱状图
-  var foods = [
-    { name: '撒撇', usage: 95 },
-    { name: '泡鲁达', usage: 92 },
-    { name: '傣族手抓饭', usage: 88 },
-    { name: '过手米线', usage: 80 },
-    { name: '景颇鬼鸡', usage: 76 },
-    { name: '舂鸡脚', usage: 70 },
-    { name: '烧粑粑', usage: 60 }
-  ];
-  var usageChart = null;
-  function renderChart(data) {
-    var ctx = document.getElementById('usageChart').getContext('2d');
-    if (usageChart) usageChart.destroy();
-    usageChart = new Chart(ctx, {
+  // 人气柱状图
+  var charts = {};
+  function renderChart(key, data, color) {
+    var ctx = document.getElementById(key + 'Chart').getContext('2d');
+    if (charts[key]) charts[key].destroy();
+    charts[key] = new Chart(ctx, {
       type: 'bar',
       data: {
         labels: data.map(function (d) { return d.name; }),
         datasets: [{
           label: '人气指数',
-          data: data.map(function (d) { return d.usage; }),
-          backgroundColor: '#4a6580'
+          data: data.map(function (d) { return d.hot; }),
+          backgroundColor: color
         }]
       },
       options: {
@@ -223,6 +216,18 @@
         scales: { y: { beginAtZero: true } }
       }
     });
+  }
+
+  function loadStats() {
+    fetch('data.json')
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        renderChart('spot', data.spots, '#4a6580');
+        renderChart('food', data.foods, '#c08a4a');
+      })
+      .catch(function () {
+        document.getElementById('stats').innerHTML = '<div class="empty">统计数据加载失败</div>';
+      });
   }
 
   // 页面切换
@@ -234,7 +239,7 @@
   });
 
   document.getElementById('areaFilter').addEventListener('change', renderSpots);
-  document.getElementById('typeFilter').addEventListener('change', renderSpots);
+  document.getElementById('timeFilter').addEventListener('change', renderSpots);
   renderSpots();
 
   // hash 路由，支持直接访问 #study / #stats
@@ -245,7 +250,7 @@
     document.querySelectorAll('nav a').forEach(function (a) {
       a.classList.toggle('active', a.getAttribute('data-page') === id);
     });
-    if (id === 'stats') renderChart(foods);
+    if (id === 'stats') loadStats();
   }
   function applyHash() {
     var h = (location.hash || '#home').replace('#', '');
